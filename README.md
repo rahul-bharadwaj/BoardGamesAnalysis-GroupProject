@@ -26,6 +26,7 @@ Team members:
 # Tasks
 
 
-- [ ] Contributed step 4-5 to the team github repo **due 21st Aug**
+- [ ] Contributed to step 4-5 to the team github repo **due 21st Aug**
+- [ ] Completed tasks 6-7 to present a final report for the group assignment.
 - [ ] Final report available on repo **due 28th Aug**
 - [ ] Peer feedback provided as an issue on your assigned group's repo **due 4th Sep**

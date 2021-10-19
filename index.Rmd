@@ -1,0 +1,482 @@
+---
+title: "ETC5521 Assignment 1"
+subtitle: ""
+team: [Echidna]
+author:
+  - [Ruimin Lin]
+  - [Rahul Bharadwaj]
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE,
+                      fig.align = 'center',
+                      fig.pos = 'H')
+```
+
+```{r Libraries, include = FALSE}
+library(tidyverse)
+library(kableExtra)
+library(plotly)
+library(visdat)
+library(gridExtra)
+library(broom)
+library(bookdown)
+library(knitr)
+```
+
+```{r ReadData, include = FALSE}
+board_games <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-03-12/board_games.csv")
+```
+
+[This assignment is for ETC5521 Assignment 1 by Team `r rmarkdown::metadata$team` comprising of `r knitr::combine_words(rmarkdown::metadata$author)`.]{style="color:#006DAE;"}
+
+
+# Introduction and Motivation
+
+Board Game has been a type of leisure that people have enjoyed from a very long time even before computers and video-games existed and has gone through enormous evolution ever since its inception. Board Games enables a way for people to socialize, reducing stress under such a fast-moving society, and paves way for an extensive brain exercise. Being a popular choice of leisure, what makes board games great? What is the reason for Board Games to have survived in a world of Virtual Reality games? In other words, what are the common characteristics of top ranked board games? What are the best board games in terms of average rating? 
+
+The original board games data used in this report is obtained from the [Board Game Geek](https://boardgamegeek.com/) database, and is cleaned and shared by [Thomas Mock](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-03-12). 
+
+The tidy dataset consists of `r ncol(board_games)` columns and `r nrow(board_games)` rows, in which there are `r ncol(board_games)` variables and `r nrow(board_games)` observations. It consists of data such as max/min playtime, max/min players, min age of players that can play, game designer, game publisher, mechanics of the game and a lot more. One thing to notice is that even though the data set is tidy, we still find observations in variables like `category`, `family`, `mechanic` to be messy and repetitive, which may limit our ability to explore these variables.
+
+# Data Description
+
+The aim of this exploratory analysis is to find out what factor affects the average rating of board games. This would give insights as to what board games are most popular and the characteristics these board games share. Therefore, we have articulated the following questions to help us with further exploration of the board games data.
+
+Primary Question:
+
+**What are the common characteristics of top ranked board games?**
+
+Secondary Questions:
+
+1. What are the top 10 ranked board games?
+2. How do variables like min/max playtime, min/max players, or min_age affect the average rating?
+3. Which game designer was most successful in producing popular games? Which publisher published the most popular games?
+
+The variables included in the data are as follows:
+
+```{r glimpseData}
+glimpse(board_games)
+```
+The explanation of variables and variable types are provided to enable a better understanding of the variables in board games data set.
+
+* game_id: ID of a particular game, the game_id should be a character vector(categorical) instead of a double vector mentioned in the table above.
+
+* description: Game description, a character vector.
+
+* image: URL image of the game, a character vector.
+
+* max_players/min_player: maximum/minimum number of recommended players, double vectors.
+
+* max_playtime/min_playtime: maximum/minimum recommended playtime, double vectors.
+
+* min_age: recommended minimum player age, double vectors.
+
+* name: name of the game, a character vector.
+
+* playing_time: average playtime of a game, a double vector.
+
+* thumbnail: URL thumbnail of the game, a character vector.
+
+* year_published: year the game was published, a double vector.
+
+* artist: artist for game art, a character vector.
+
+* category: categories of the game, a character vector.
+
+* compilation: name of compilation, a character vector.
+
+* designer: game designer, a character vector.
+
+* expansion: name of expansion pack (if any), a character vector.
+
+* family: family of game - equivalent to a publisher, a character vector.
+
+* mechanic: how game is played, a character vector.
+
+* publisher: company/person who published the game, a character vector.
+
+* average_rating: average rating from 1 to 10 on the website(Board Games Geek), a double vector.
+
+* users_rated: number of users rated the game, a double vector.
+
+To ensure the reliability of the board game ratings, the data is limited to games with at least 50 ratings and for games between 1950 and 2016. The site's database has more than 90,000 games with crowd-sourced ratings.
+
+The original board games data set consists of 90400 observations, and 80 variables. Therefore, data cleaning and wrangling is necessary to enable better analysis procedure. Thomas has replaced long and complicated variable names like `details.description` in original data to `description` using `janitor::clean_names` and `set_names` function, which avoids messy code writing. In addition, he has eliminated around 50 variables using the `select` function and that leaves 27 variables at this stage.
+
+The data set is then filtered to board games published from 1950 to 2016, with at least 50 users rated. 'NA' values in variable `year_published` is also omitted. Thomas then excludes variables that may not be useful for the analysis, such as `attributes_total`, `game_type` etc., which ultimately, leaves us with a tidy data set (22 variables and 10532 variables) that is relatively concise and convenient for further exploration.
+
+# Analysis and Findings
+
+## Initial Data Analysis
+
+* Initial Data Analysis is a process which helps one get a feel of the data in question. This helps us have an overview of the data and gives insights about potential Exlporatory Data Analyis (EDA).
+* Initial data analysis is the process of data inspection steps to be carried out after the research plan and data collection have been finished but before formal statistical analyses. The purpose is to minimize the risk of incorrect or misleading results.
+* IDA can be divided into 3 main steps:
+  + Data cleaning is the identification of inconsistencies in the data and the resolution of any such issues.
+  + Data screening is the description of the data properties.
+  + Documentation and reporting preserve the information for the later statistical analysis and models.
+  
+
+```{r visdatData, fig.cap='Visualization of Data Types', fig.align = "center", fig.height=4, fig.width=6}
+vis_dat(board_games) + ggtitle("Distribution of Data Types")
+```
+
+
+* The plot above \@ref(fig:visdatData) clearly visualizes the distribution of    data types in our dataset with column in x-axis and number of observations on the y-axis. This gives a concise overview of the data and what columns are useful for analysis. This plot hints that we can use all the numeric columns along with `designer` and `publisher` columns for our analysis.
+
+
+```{r vismissData, fig.cap='Visualization of Missing Values', fig.align = "center", fig.height=4, fig.width=6}
+vis_miss(board_games) + ggtitle("Distribution of Missing Values")
+```
+
+* The above plot \@ref(fig:vismissData) shows the percentage of missing values and where exactly they are missing with x-axis showing columns and the y-axis showing the corresponding observations. We can also observe that each column has a percentage of missing values mentioned which come in handy while deciding what columns not to pick for analysis.
+
+* It is evident that the following columns have missing values and are not of much use for the analysis:
+  + `compilation` - 96.11% missing
+  + `expansion` - 73.87% missing
+  + `family` - 26.66% missing
+  + `mechanic` - 9.02% missing
+  
+* This is a limitation of the dataset and we frame our questions keeping this in mind.
+
+## Questions of Interest
+
+**1. What are the top 10 ranked board games?**
+
+```{r Top10barchart, fig.cap='Top 10 ranked board games', fig.align = "center", fig.height=3, fig.width=6}
+Q1 <- board_games %>%
+  arrange(desc(average_rating)) %>%
+  head(10)
+
+Q1 %>% 
+  ggplot(aes(name, average_rating, fill = name, label = name)) +
+  geom_col() +
+  geom_text(size = 3, angle = 90, position = position_stack(vjust = 0.5)) +
+  theme(axis.text.x = element_blank(),
+        legend.position = "none") +
+  xlab("Board Games") +
+  ylab("Average rating") +
+  ggtitle("Top 10 Ranked Board Games")
+
+```
+
+```{r Top10table}
+Q1 %>%
+  dplyr::select(name, average_rating, max_playtime, 
+                min_playtime, max_players, min_players) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+
+**2. How do variables like min/max playtime, min/max players, or min_age affect the average rating in these top-ranked board games?**
+
+```{r Top50Create}
+board_games_top50 <- board_games %>%
+  dplyr::select(game_id, 
+                max_players, 
+                max_playtime, 
+                min_players, 
+                min_playtime, 
+                min_age, 
+                name,
+                playing_time,
+                year_published,
+                designer,
+                publisher,
+                average_rating,
+                users_rated) %>%
+  arrange(desc(average_rating)) %>%
+  head(50)
+```
+
+```{r visdatTop50, fig.cap='Visualization of Data Types in Top 50 Games', fig.align = "center", fig.height=4, fig.width=6}
+vis_dat(board_games_top50) + ggtitle("Distribution of Data Types in Top 50 Games")
+```
+
+* The above plot \@ref(fig:visdatTop50) shows a distribution of Data Types in our Top 50 Games dataset with x-axis showing column names and y-axis its corresponding observations.
+
+* It is evident that our selection of columns is appropriate and there are no missing values in our data. Hence, we need not check for missing values through `vis_miss()` function. We can use all these columns for an effective analysis of our questions of interest.
+
+```{r MaxPlaytime, fig.cap = "Relationship between Maximum Playtime and Average Rating"}
+p1 <- board_games_top50 %>%
+  ggplot(aes(max_playtime, average_rating, colour = name)) +
+  geom_point() +
+  theme(legend.position = "none") +
+  xlab("Maximum Playtime") +
+  ylab("Average Rating") +
+  ggtitle("Relationship between Maximum Playtime and Average Rating")
+
+ggplotly(p1)
+```
+
+
+* To have a better idea on the common characteristics of top-ranked board games and ensuring the reliability of the results, we have widened the range to top 50.
+
+* In plot \@ref(fig:MaxPlaytime) we can see that there are a few obvious distinct values present, which are:
+  + The Greatest Day:Sword, Juno, and Gold Beaches with 6000 minutes max. playtime and an average rating of 8.8308
+  + Axis Empires: Totaler Krieg! with 3600 minutes max. playtime and average rating of 8.4194
+  + Beyond the Rhine with 3000 minutes max. playtime and average rating of 8.5979
+
+* It is difficult to examine the trend or common characteristics with these outliers presents, therefore, we have limited the maximum playtime to less than xx minutes using the IQR outliers formula. (Q1 - 1.5IQR and Q3 + 1.5 IQR)
+
+```{r MaxPlaytimeStat}
+iqr1 <- summary(board_games_top50$max_playtime)
+tidy(iqr1)
+```
+
+```{r iqr1-outlier}
+lo1 <- 82.5 - 1.5*(345-82.5)
+up1 <- 345 + 1.5*(345-82.5)
+
+tibble(lower_range = lo1,
+       upper_range = up1)
+```
+
+```{r BoxPlotMaxPlaytime}
+bpmaxplaytime <- board_games_top50 %>% 
+  ggplot() +
+  geom_boxplot(mapping = aes(y= max_playtime), fill = "white") +
+  geom_hline(yintercept = median(board_games_top50$max_playtime), color='red')
+```
+
+```{r MaxPlaytimePlot, fig.cap = 'Adjusted Maximum Playtime', fig.align = "center", fig.height=3, fig.width=6}
+p1a <- board_games_top50 %>%
+  dplyr::filter(max_playtime < 738.75) %>%
+  ggplot(aes(max_playtime, average_rating, colour = name)) +
+  geom_point(size = 2) +
+  theme(legend.position = "none") +
+  geom_vline(xintercept = median(board_games_top50$max_playtime), color='red') +
+  xlab("Maximum Playtime Adjusted") +
+  ylab("Average Rating") +
+  ggtitle("Relationship between Maximum Playtime and Average Rating")
+
+p1a
+```
+Now we can have a clearer picture of where majority of top-50 ranked board games lie in the graph of average rating against maximum playtime. Which, majority of board games lie within the range of 200 minutes of maximum playtime, the highest ranting board game also lies within the range, around 100 minutes of maximum playtime. Another thing to notice is that, for board games that have maximum playtime longer than 600 minutes, the rating is comparatively lower.
+
+Nearly half of high rating board games are crowded in the range of 0-200 minutes, suggesting that people tend to play board games that does not occupy too much leisure time.
+
+```{r MinPlaytimeStat, include = FALSE}
+iqr2 <- summary(board_games_top50$min_playtime)
+tidy(iqr2)
+```
+
+```{r iqr2-outlier, include = FALSE}
+lo2 <- 45 - 1.5*(180-45)
+up2 <- 180 + 1.5*(180-45)
+
+tibble(lower_range = lo2,
+       upper_range = up2)
+```
+
+```{r BoxPlotMinPlaytime}
+bpminplaytime <- board_games_top50 %>% ggplot() +
+  geom_boxplot(mapping = aes(y= min_playtime), fill = "white") +
+  geom_hline(yintercept = median(board_games_top50$min_playtime), color='red')
+```
+
+```{r MinPlaytimePlot, fig.cap='Minimum Playtime Plot', fig.align = "center", fig.height=3, fig.width=6}
+p2 <- board_games_top50 %>%
+  dplyr::filter(min_playtime < 382.5) %>%
+  ggplot(aes(min_playtime, average_rating, colour = name)) +
+  geom_point(size = 2) +
+  theme(legend.position = "none") +
+  geom_vline(xintercept = median(board_games_top50$min_playtime), color='red') +
+  xlab("Minimum Playtime") +
+  ylab("Average Rating") +
+  ggtitle("Relationship between Minimum Playtime and Average Rating")
+
+p2
+```
+
+* We have implemented the same method to omit the outliers as done previously, the graph demonstrates that in top-50 ranked board games, most of them have a minimum playtime less than 100 minutes.
+
+```{r BoxPlotMinPlayers}
+bpminplayers <- board_games_top50 %>% ggplot() +
+  geom_boxplot(mapping = aes(y= min_players), fill = "white") +
+  geom_hline(yintercept = median(board_games_top50$min_players), color='blue')
+```
+
+```{r MinPlayersPlot, fig.cap = "Relationship between Minimum Players and Average Rating", fig.align = "center", fig.height=3, fig.width=6}
+p3 <- board_games_top50 %>%
+  ggplot(aes(min_players, average_rating, colour = name)) +
+  geom_point(size = 2) +
+  theme(legend.position = "none") +
+  geom_vline(xintercept = median(board_games_top50$min_players), color='blue') +
+  xlab("Minimum Players") +
+  ylab("Average Rating") +
+  ggtitle("Relationship between Minimum Players and Average Rating")
+
+p3
+```
+* In the scatterplot for average rating against minimum players, we observed that most top 50 board games have at least 2 players.
+
+```{r BoxPlotMaxPlayers}
+bpmaxplayers <- board_games_top50 %>% ggplot() +
+  geom_boxplot(mapping = aes(y= max_players), fill = "white") +
+  geom_hline(yintercept = median(board_games_top50$max_players), color='blue')
+```
+
+```{r MaxPlayersPlot, fig.cap = "Relationship between Maximum Players and Average Rating", fig.align = "center", fig.height=3, fig.width=6}
+p4 <- board_games_top50 %>%
+  dplyr::filter(max_players <15) %>%
+  ggplot(aes(max_players, average_rating, colour = name)) +
+  geom_point(size = 2) +
+  theme(legend.position = "none") +
+  geom_vline(xintercept = median(board_games_top50$max_players), color='blue')+
+  xlab("Maximum Players") +
+  ylab("Average Rating") +
+  ggtitle("Relationship between Maximum Players and Average Rating")
+
+p4
+```
+
+* In the scatterplot for average rating against maximum players, we observed that most top 50 board games have a maximum of 4 or 5 players.
+
+* The figure \@ref(fig:MinPlayersPlot) and \@ref(fig:MaxPlayersPlot) indicates that majority of high rating board games have set the players to between 2 and 4/5 players. The limitation of players suggest that people tend to play board games that fulfills their sense of participation, for example, a board game of 8 players may not be as attractive as a board game of 2 players, because a 2-player game has little downtime than a 8-player game, and satisfies each players' sense of participation in the board game.
+
+* On the other hand, it is easier to gather a group of 2-4 people interesting in play board games at leisure time than gathering a group of 8 or more people.
+
+
+```{r BoxPlotMinAge}
+bpminage <- board_games_top50 %>% ggplot() +
+  geom_boxplot(mapping = aes(y= min_age), fill = "white") +
+  geom_hline(yintercept = median(board_games_top50$min_age), color='green')
+```
+
+```{r MinAgePlot, fig.cap='Minimum Age Plot', fig.align = "center", fig.height=3, fig.width=6}
+p5 <- board_games_top50 %>%
+  ggplot(aes(min_age, average_rating, colour = name)) +
+  geom_point(size = 2) +
+  theme(legend.position = "none") +
+  geom_vline(xintercept = median(board_games_top50$min_age), color='green')+
+  xlab("Minimum Age") +
+  ylab("Average Rating") +
+  ggtitle("Relationship between Minimum Age and Average Rating")
+
+p5
+```
+
+* In the scatterplot for average rating against minimum age of players, we observed that the minimum age set by majority of board games are between 10 - 15.
+
+
+```{r BoxplotCompare, fig.cap='Summarizing all observations as Boxplots'}
+grid.arrange(bpminplayers, bpmaxplayers, bpminplaytime, bpmaxplaytime)
+```
+
+* All the insights for the top 50 popular games are summarized in the boxplots above as follows:
+  + A **maximum of 4 players** and **minimum of 2 players** is most popular in the top 50 games.
+  + The **maximum and minimum playtime** seem to be almost close and **range between 60-150 minutes** for top 50 games.
+
+```{r smooth, fig.cap='Relationship between Average Rating and other Attributes'}
+a <- board_games_top50 %>% ggplot(aes(x = average_rating, y = min_players)) + geom_point() +
+  geom_smooth()
+
+b <- board_games_top50 %>% ggplot(aes(x = average_rating, y = max_players)) + geom_point() +
+  geom_smooth()
+
+c <- board_games_top50 %>% ggplot(aes(x = average_rating, y = min_playtime)) + geom_point() +
+  geom_smooth()
+
+d <- board_games_top50 %>% ggplot(aes(x = average_rating, y = max_playtime)) + geom_point() +
+  geom_smooth()
+
+e <- board_games_top50 %>% ggplot(aes(x = average_rating, y = min_age)) + geom_point() +
+  geom_smooth()
+
+grid.arrange(a, b, c, d)
+```
+
+* The above plot \@ref(fig:smooth) shows a trend for different attributes against average rating on x-axis. We can get a better idea using this pattern.
+
+* We can observe the following trend for the top 50 rated games as average rating increases -
+  + The **Minimum Players** tends to be around **2 players**. The **Maximum Players** tends to be **around 4 and increases up to 6**.
+  + The **Minimum Playtime** tends to vary between **60-500 minutes**. The **Maximum Playtime** tends to vary between **150-1000 minutes**.
+  
+```{r minagecompare, fig.cap='Minimum Age Plots'}
+grid.arrange(bpminage, e)
+```
+
+* We can observe the following for the attribute Minimum Age -
+
+  + Players of **age between 10-15 years** mostly play the top 50 games.
+  + We can observe from the trend that games are more popular among **age group of 7-13 year olds**
+  
+**3. Which game designer was most successful in producing popular games? Which publisher published the most popular games?**
+
+```{r Designers, fig.cap='Top 10 Game Designers'}
+top10 <- board_games_top50 %>% arrange(desc(average_rating)) %>% head(10)
+
+top10 %>% ggplot(aes(x = average_rating, y = designer, color = designer)) +
+  geom_point() + theme(axis.text.y = element_blank()) +
+  geom_text(label = top10$year_published, vjust = 0, nudge_y = 0.15) +
+  geom_vline(xintercept = mean(top10$average_rating)) +
+  xlab("Average Rating") + ylab("Designer") + ggtitle("Top 10 Game Designers")
+```
+
+* The above scatter-plot \@ref(fig:Designers) consists of average rating on x-axis and designer on y-axis. The black x-intercept represents the mean value of average ratings of the top 10 designers. The plot conveys that the **mean average rating is around 8.82** with 5 observations on either side of the line.
+
+* **Philippe Keyaerts** has the **highest rated game** at around 9+ followed by **Vlaada Chvatil** around 8.93 with all the other designers falling around the mean value. The **lesser rated designer** in the top 10 is **Rob Daviau, Matt Leacock**. We should note that Dean Essig has two games in the top 10. 
+
+* Who among these is the best is still a debatable question. Some might say it is Dean, while some might consider Philippe. Nevertheless, all of the designers in the plot are among the top 10 and have produced the most popular games. 
+
+```{r Publishers, fig.cap='Top 7 Game Publishers'}
+top7 <- top10 %>% head(7)
+  
+top7 %>% ggplot(aes(x = average_rating, y = publisher, color = publisher)) +
+  geom_point() + theme(axis.text.y = element_blank()) +
+  geom_text(label = top7$year_published, vjust = 0, nudge_y = 0.15) +
+  xlab("Average Rating") + ylab("Publisher") + ggtitle("Top 7 Game Publishers")
+```
+
+* The above scatter-plot \@ref(fig:Publishers) consists of average rating on x-axis and publisher on y-axis.
+
+* The first thing that strikes from looking at this plot is that **Multi-Man Publishing has 3 among the top 7 rated board games** which hints that they are one of the best publishers.
+
+* The **top rated game was published by Days of Wonder** and the **lesser rated game** in the top 7 was published by **Compass Games**. Again, it is debatable as to who is best but the publishers in the above plot have published some of the finest board games.
+
+**Bonus Insight -** An interesting takeaway from the above two plots is that the best and **top rated board games were launched between 2010-2016** with most of the top rated games launched in the year **2015.**
+
+# References
+
+*Websites*
+
+* BoardGameGeek | Gaming Unplugged Since 2000. (2000). BGG. https://boardgamegeek.com/BoardGameGeek
+
+* Huebner, M., Vach, W. and le Cessie, S., 2016. [A systematic approach to initial data analysis](https://www.sciencedirect.com/science/article/pii/S0022522315017948#:~:text=Initial%20data%20analysis%20is%20the,of%20incorrect%20or%20misleading%20results.) is good research practice. The Journal of Thoracic and Cardiovascular Surgery, 151(1), pp.25-27.
+
+* Thomas Mock, (2019). Tidy Tuesday. https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-03-12
+
+*R packages*
+
+* Baptiste Auguie (2017). gridExtra: Miscellaneous Functions for "Grid" Graphics. R
+  package version 2.3. https://CRAN.R-project.org/package=gridExtra
+
+* C. Sievert. Interactive Web-Based Data Visualization with R, plotly, and shiny. Chapman
+  and Hall/CRC Florida, 2020.
+  
+* David Robinson, Alex Hayes and Simon Couch (2020). broom: Convert Statistical Objects
+  into Tidy Tibbles. R package version 0.7.0. https://CRAN.R-project.org/package=broom
+  
+* Hao Zhu (2019). kableExtra: Construct Complex Table with 'kable' and Pipe Syntax. R
+  package version 1.1.0. https://CRAN.R-project.org/package=kableExtra
+  
+* Tierney N (2017). “visdat: Visualising Whole Data Frames.” _JOSS_, *2*(16), 355. doi:
+10.21105/joss.00355 (URL: https://doi.org/10.21105/joss.00355), <URL:
+http://dx.doi.org/10.21105/joss.00355>.
+
+* Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43),
+  1686, https://doi.org/10.21105/joss.01686
+
+* Yihui Xie (2020). bookdown: Authoring Books and Technical Documents with R Markdown. R
+  package version 0.20.
+  
+* Yihui Xie (2020). knitr: A General-Purpose Package for Dynamic Report Generation in R. R
+  package version 1.29.
